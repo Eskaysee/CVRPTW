@@ -53,7 +53,7 @@ public class Customer implements Comparable<Customer> {
         double deltaY = coord[1] - other.getCoord()[1];
         double Xsqrd = deltaX * deltaX;
         double Ysqrd = deltaY * deltaY;
-        return 1/Math.sqrt(Xsqrd + Ysqrd);
+        return Math.sqrt(Xsqrd + Ysqrd);
     }
 
     @Override
