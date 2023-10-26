@@ -11,11 +11,11 @@ public enum Configuration {
     public final String fileSeparator = System.getProperty("file.separator");
     public final String lineSeparator = System.getProperty("line.separator");
     public final String userDirectory = System.getProperty("user.dir");
-    public final String logFile = userDirectory + fileSeparator + "log" + fileSeparator + "CVRPTW.log";
+    public final String logFile = userDirectory + fileSeparator + "logs" + fileSeparator + "CVRPTW.log";
     public final MersenneTwister randomGenerator = new MersenneTwister(System.currentTimeMillis());
     public final Map<Integer, Customer> customers = clientData();
 
-    public final int fleetSize = 8;
+    public final int fleetSize = 8;//9;//10;//12;//13;//15;
     public final int maximumNumberOfGenerations = 43;
     public final int maximumNumberOfIterations = 10000;
     public final int numberOfCustomers = 100;
@@ -24,15 +24,11 @@ public enum Configuration {
     public final float crossoverRatio = 0.7f;
     public final float elitismRatio = 0.1f;
     public final float mutationRatio = 0.005f;
-    //Particle Swarm Optimization Parameters
-    public final double inertia = 0.729844;
-    public final double cognitiveRatio = 1.496180; // cognitive component
-    public final double socialRatio = 1.496180;    // social component
 
     private Map<Integer,Customer> clientData() {
         try {
             Scanner data = new Scanner(new File("Data.csv"));
-            Map<Integer, Customer> clientele = new HashMap<>();
+            Map<Integer, Customer> clientele = new HashMap<>(numberOfCustomers+1);
             clientele.put(0, new Customer());
             while (data.hasNextLine()) {
                 String[] Customer = data.nextLine().split(",");

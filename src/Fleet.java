@@ -1,10 +1,8 @@
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 
 public class Fleet {
 
+    private final int fleetSize;
     private final float elitismRatio;
     private final float mutationRatio;
     private final float crossoverRatio;
@@ -12,31 +10,30 @@ public class Fleet {
     private int numberOfCrossoverOperations = 0;
     private int numberOfMutationOperations = 0;
     private final Map<Integer, Customer> clients;
-    private Vector bestPosition;
-    private double bestEvaluation;
+    private Map<Vehicle, Float> wheel;
 
-    public Fleet() {
-        this.elitismRatio = Configuration.INSTANCE.elitismRatio;
-        this.mutationRatio = Configuration.INSTANCE.mutationRatio;
-        this.crossoverRatio = Configuration.INSTANCE.crossoverRatio;
+    public Fleet(int fleetSize, float elitismRatio, float mutationRatio, float crossoverRatio) {
+        this.fleetSize = fleetSize;
+        this.elitismRatio = elitismRatio;
+        this.mutationRatio = mutationRatio;
+        this.crossoverRatio = crossoverRatio;
         this.clients = Configuration.INSTANCE.customers;
 
-        ArrayList<Vehicle> vehicles = new ArrayList<>();
+        int geneLength=0;
+        if (Configuration.INSTANCE.numberOfCustomers%fleetSize==0)
+            geneLength = Configuration.INSTANCE.numberOfCustomers/fleetSize;
+        else geneLength = Configuration.INSTANCE.numberOfCustomers/fleetSize + 1;
+
+        ArrayList<Vehicle> trucks = new ArrayList<>();
         ArrayList<Customer> customers = new ArrayList<>(clients.values());
-        Customer depot = new Customer();
-        customers.remove(depot);
+        customers.remove(0);
         while (customers.size() > 0) {
             Collections.shuffle(customers, new MersenneTwister());
-            customers.add(0, depot);
-            if (vehicles.isEmpty())
-                vehicles.add(new Vehicle(customers,0));
-            else vehicles.add(new Vehicle(customers, vehicles.get(0).getGenes().length));
-            for (int i : vehicles.get(vehicles.size()-1).getGenes()) {
-                if (i != 0)
-                    customers.remove(clients.get(i));
-            }
-            customers.remove(depot);
+            trucks.add(new Vehicle(customers, geneLength));
         }
+        fleet = trucks.toArray(new Vehicle[0]);
+        Arrays.sort(fleet);
+        System.out.println();
     }
 
     //Constructor
@@ -50,44 +47,44 @@ public class Fleet {
     }
 
     public void evolve() {
-        Vehicle[] chromosomes = new Vehicle[fleet.length];
+        Vehicle[] trucks = new Vehicle[fleet.length];
 
         int index = Math.round(fleet.length * elitismRatio);
-        System.arraycopy(fleet, 0, chromosomes, 0, index);
+        System.arraycopy(fleet, 0, trucks, 0, index);
+        ArrayList<Vehicle> remainingTrucks = new ArrayList<>(Arrays.asList(Arrays.copyOfRange(fleet, index, fleet.length)));
 
-        while (index < chromosomes.length) {
+        while (index < trucks.length) {
             if (Configuration.INSTANCE.randomGenerator.nextFloat() <= crossoverRatio) {
-                Vehicle[] parents = selectParents();
+                Vehicle[] parents = selectParents(remainingTrucks);
                 Vehicle[] children = parents[0].crossover(parents[1]);
                 numberOfCrossoverOperations++;
 
                 if (Configuration.INSTANCE.randomGenerator.nextFloat() <= mutationRatio) {
-                    chromosomes[(index++)] = children[0].mutation();
+                    trucks[(index++)] = children[0].mutation();
                     numberOfMutationOperations++;
                 } else {
-                    chromosomes[(index++)] = children[0];
+                    trucks[(index++)] = children[0];
                 }
 
-                if (index < chromosomes.length) {
+                if (index < trucks.length) {
                     if (Configuration.INSTANCE.randomGenerator.nextFloat() <= mutationRatio) {
-                        chromosomes[index] = children[1].mutation();
+                        trucks[index] = children[1].mutation();
                         numberOfMutationOperations++;
                     } else {
-                        chromosomes[index] = children[1];
+                        trucks[index] = children[1];
                     }
                 }
             } else if (Configuration.INSTANCE.randomGenerator.nextFloat() <= mutationRatio) {
-                chromosomes[index] = fleet[index].mutation();
+                trucks[index] = remainingTrucks.remove(0).mutation();
                 numberOfMutationOperations++;
             } else {
-                chromosomes[index] = fleet[index];
+                trucks[index] = remainingTrucks.remove(0);
             }
 
             index++;
         }
-
-        Arrays.sort(chromosomes);
-        fleet = chromosomes;
+        fleet = trucks;
+        Arrays.sort(fleet);
     }
 
     public Vehicle[] getFleet() {
@@ -96,51 +93,49 @@ public class Fleet {
         return chromosomes;
     }
 
-    private Vehicle[] selectParents() {
-        Vehicle[] parents = new Vehicle[2];
-
-        for (int i = 0; i < 2; i++) {
-            parents[i] = fleet[Configuration.INSTANCE.randomGenerator.nextInt(fleet.length)];
-            for (int j = 0; j < 3; j++) {
-                int index = Configuration.INSTANCE.randomGenerator.nextInt(fleet.length);
-                if (fleet[index].compareTo(parents[i]) < 0) {
-                    parents[i] = fleet[index];
-                }
-            }
+    public double totalDistance() {
+        double sum = 0;
+        for (Vehicle vehicle : fleet) {
+            sum += vehicle.getDistance();
         }
+        return sum;
+    }
 
+    private Vehicle[] selectParents(ArrayList<Vehicle> trucks) {
+        Vehicle[] parents = new Vehicle[2];
+        if (trucks.size()==1) {
+            parents[0] = trucks.remove(0);
+            parents[1] = parents[0];
+            return parents;
+        }
+        parents[0] = trucks.remove(0);
+        updateWheel(trucks); Vehicle previousTruck = null;
+        float spin = Configuration.INSTANCE.randomGenerator.nextFloat();
+        for (Vehicle vehicle : trucks) {
+            if (spin <= wheel.get(vehicle)) {
+                if (previousTruck == null) {
+                    parents[1] = vehicle;
+                    break;
+                } else if (wheel.get(previousTruck) < spin) {
+                    parents[1] = vehicle;
+                    break;
+                } else previousTruck = vehicle;
+            } else previousTruck = vehicle;
+        }
+        trucks.remove(parents[1]);
         return parents;
     }
 
-    private void updateGlobalBest(Vehicle vehicle) {
-        if (vehicle.getBestEvaluation() < bestEvaluation) {
-            bestPosition = vehicle.getBestPosition();
-            bestEvaluation = vehicle.getBestEvaluation();
+    private void updateWheel(ArrayList<Vehicle> trucks) {
+        float totalFitness = 0;
+        for (Vehicle truck : trucks)
+            totalFitness += truck.getFitness();
+        Map<Vehicle, Float> probs = new LinkedHashMap<>();
+        float cdf = 0.0F;
+        for (Vehicle vehicle : trucks) {
+            cdf += (vehicle.getFitness() / totalFitness);
+            probs.put(vehicle, cdf);
         }
-    }
-
-    private void updateVelocity(Vehicle vehicle) {
-        Vector oldVelocity = vehicle.getVelocity();
-        Vector pBest = vehicle.getBestPosition();
-        Vector gBest = bestPosition.clone();
-        Vector pPosition = vehicle.getPosition();
-
-        double randomNumber01 = Configuration.INSTANCE.randomGenerator.nextDouble();
-        double randomNumber02 = Configuration.INSTANCE.randomGenerator.nextDouble();
-
-        Vector newVelocity = oldVelocity.clone();
-        newVelocity.multiply(Configuration.INSTANCE.inertia);
-
-        pBest.subtract(pPosition);
-        pBest.multiply(Configuration.INSTANCE.cognitiveRatio);
-        pBest.multiply(randomNumber01);
-        newVelocity.add(pBest);
-
-        gBest.subtract(pPosition);
-        gBest.multiply(Configuration.INSTANCE.socialRatio);
-        gBest.multiply(randomNumber02);
-        newVelocity.add(gBest);
-
-        vehicle.setVelocity(newVelocity);
+        this.wheel = probs;
     }
 }

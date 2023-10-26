@@ -5,7 +5,6 @@ public class Customer implements Comparable<Customer> {
     private final double readyTime;
     private final double dueTime;
     private final double serviceTime;
-//    protected Vehicle delivery;
 
     public Customer() {
         id = 0;

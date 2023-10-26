@@ -1,87 +1,39 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 
 public class Vehicle implements Comparable<Vehicle>{
 
-    private final Vector position;
-    private Vector velocity;
-    private Vector bestPosition;
-    private double bestEvaluation;
     private final int[] genes;
-    private final double fitness;
+    private final float fitness;
     private final Map<Integer, Customer> customers;
+    private final double demand;
 
     //Constructor
-    public Vehicle(ArrayList<Customer> init, int padding) {
-        this.position = new Vector(35.0,35.0,0);
-        double totalDemand = init.stream().mapToDouble(Customer::getDemand).sum();
+    public Vehicle(ArrayList<Customer> init, int seats) {
         ArrayList<Integer> chromosome;
-        if (totalDemand>200)
-            chromosome = generateGene(init);
-        else {
-            chromosome = new ArrayList<>(init.stream().sorted().map(Customer::getId).toList());
-            chromosome.add(0, 0);
-            chromosome.add(0);
-        }
-        genes = pad(padding, chromosome);
-        fitness = calculateFitness();
         this.customers = Configuration.INSTANCE.customers;
-        this.velocity = new Vector();
-    }
-
-    private int[] pad(int padding, ArrayList<Integer> chromosomes) {
-        if (padding == 0) return chromosomes.stream().mapToInt(Integer::intValue).toArray();
-        else {
-            for (int i=chromosomes.size(); i<padding; i++) chromosomes.add(0);
-            return chromosomes.stream().mapToInt(Integer::intValue).toArray();
-        }
+        chromosome = generateGene(seats,init);
+        if (chromosome.size()<seats+2) genes = pad(seats+2, chromosome);
+        else genes = pad(seats, chromosome);
+        fitness = (float) (1/getDistance());
+        demand = getDemand();
+        System.out.println();
     }
 
     public Vehicle(int[] chromosome) {
         this.genes = chromosome;
-        this.position = new Vector(35.0,35.0,0);
         this.customers = Configuration.INSTANCE.customers;
-        this.fitness = calculateFitness();
-        this.velocity = new Vector();
+        this.fitness = (float) (1/getDistance());
+        this.demand = getDemand();
     }
 
-    public Vector getPosition() {
-        return position.clone();
+    private int[] pad(int seats, ArrayList<Integer> chromosomes) {
+        for (int i=chromosomes.size(); i<seats; i++) chromosomes.add(0);
+        return chromosomes.stream().mapToInt(Integer::intValue).toArray();
     }
 
-    public Vector getVelocity() {
-        return velocity.clone();
-    }
-
-    public void setVelocity(Vector velocity) {
-        this.velocity = velocity.clone();
-    }
-
-    public Vector getBestPosition() {
-        return bestPosition.clone();
-    }
-
-    double getBestEvaluation() {
-        return bestEvaluation;
-    }
-
-    public void updatePosition() {
-        position.add(velocity);
-    }
-
-    public void updatePersonalBest() {
-        double tempEvaluation = evaluate();
-        if (tempEvaluation < bestEvaluation) {
-            bestPosition = position.clone();
-            bestEvaluation = tempEvaluation;
-        }
-    }
-
-    private double evaluate() {
-        return 0.0;
-    }
-
-    private double calculateFitness() {
+    public double getDistance() {
         double totDist = 0;
         for (int i = 0; i< genes.length-1; i++) {
             totDist += customers.get(genes[i]).distance(customers.get(genes[i+1]));
@@ -89,22 +41,42 @@ public class Vehicle implements Comparable<Vehicle>{
         return totDist;
     }
 
-    protected ArrayList<Integer> generateGene(ArrayList<Customer> init) {
-        return new Knapsack(200, init.size()-1, init, customers).getKnap();
+    private ArrayList<Integer> generateGene(int chromosomeSize, ArrayList<Customer> init) {
+        ArrayList<Integer> load = new ArrayList<>();
+        while (load.size()<chromosomeSize && init.size() > 0) load.add(init.remove(0).getId());
+        load.add(0,0);
+        load.add(0);
+        return load;
+    }
+
+    public double getDemand() {
+        double demand = 0.0D;
+        for (int i=0; i<genes.length; i++) {
+            demand += customers.get(genes[i]).getDemand();
+        }
+        return demand;
     }
 
     public int[] getGenes() {
         return genes;
     }
 
-    public double getFitness() {
+    public float getFitness() {
         return fitness;
     }
 
     //Orders vehicles by ascending distance travelled
     @Override
     public int compareTo(Vehicle other) {
-        return Double.compare(fitness, other.getFitness());
+        return Double.compare(other.getFitness(), this.fitness);
+    }
+
+    private void sortGenes(int[] truck) {
+        ArrayList<Customer> custKnapsack =  new ArrayList<>();
+        for (int i : truck)
+            custKnapsack.add(customers.get(i));
+        custKnapsack.sort(null);
+        truck = custKnapsack.stream().sorted().mapToInt(Customer::getId).toArray();
     }
 
     // crossover
@@ -119,6 +91,9 @@ public class Vehicle implements Comparable<Vehicle>{
 
         System.arraycopy(other.getGenes(), 0, child02, 0, pivot);
         System.arraycopy(genes, pivot, child02, pivot, child02.length - pivot);
+
+//        sortGenes(child01);
+//        sortGenes(child02);
 
         return new Vehicle[]{new Vehicle(child01),
                 new Vehicle(child02)};
