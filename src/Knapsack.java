@@ -9,36 +9,43 @@ public class Knapsack {
     private int capacitySize;
     private int itemsNum;
     private Customer[] items;
-    private final Map<Integer, Customer> clientMap;
+    private final Map<Integer, Customer> clientMap = Configuration.INSTANCE.customers;
     private ArrayList<Integer> knap;
     private int seats;
 
     public Knapsack(int seats, ArrayList<Customer> customers) {
         this.capacitySize = Configuration.INSTANCE.vehicleCapacity;
         this.seats = seats;
+        customers.add(0, clientMap.get(0));
         this.itemsNum = customers.size()-1;
         table = new double[itemsNum + 1][capacitySize + 1];
         knap = new ArrayList<>();
         this.items = customers.toArray(new Customer[0]);
         initTable();
         sack(itemsNum, capacitySize);
-        this.clientMap = Configuration.INSTANCE.customers;
         pickItems(itemsNum, capacitySize);
         int demand = getDemand();
-//        if (knap.size()<seats && demand<200) {
-        if (demand<200) {
-            this.capacitySize -= demand;
+        int runs=1;
+//        while (knap.size()<seats && demand<200 && runs<3) {
+        while (demand<200 && runs<3) {
+            this.capacitySize = Configuration.INSTANCE.vehicleCapacity - demand;
             cleanCustomers(customers);
-            this.items = customers.toArray(new Customer[0]);
             this.itemsNum = customers.size()-1;
+            customers.remove(0);
+            Collections.shuffle(customers, new MersenneTwister());
+            customers.add(0, clientMap.get(0));
+            this.items = customers.toArray(new Customer[0]);
             initTable();
             sack(itemsNum, capacitySize);
             pickItems(itemsNum, capacitySize);
+            demand = getDemand();
+            runs++;
         }
         cleanCustomers(customers);
+        customers.remove(0);
     }
 
-    private int getDemand() {
+    public int getDemand() {
         int demand = 0;
         for (int i : knap) demand += clientMap.get(i).getDemand();
         return demand;
@@ -75,11 +82,9 @@ public class Knapsack {
         } else pickItems(i-1, j);
     }
 
-    private boolean overlaps(Customer client) {
+    public boolean overlaps(Customer client) {
         for (int i : knap) {
-            if (clientMap.get(i).overlaps(client)) { //times may overlap by no more than 2
-                if (client.distance(clientMap.get(i))>=(3*Math.sqrt(2))) return true; //Distance beyond acceptable range
-            }
+            if (clientMap.get(i).overlaps(client)) return true;
         }
         return false;
     }
@@ -109,60 +114,51 @@ public class Knapsack {
         custKnapsack.sort(null);
         for (int i=0; i<custKnapsack.size(); i++)
             knap.set(i, custKnapsack.get(i).getId());
-        knap.add(0, 0);
-        knap.add(0);
         return knap;
     }
 
     public static void main(String[] args) {
-        try {
-            Scanner data = new Scanner(new File("Data.csv"));
-            Map<Integer, Customer> clientele = Configuration.INSTANCE.customers;
-            ArrayList<Customer> customers = new ArrayList<>(clientele.values());
-            customers.remove(0);
-            Customer depot = new Customer();
-            ArrayList<ArrayList<Integer>> vehicles = new ArrayList<>();
-            int vehiclesNum = 0;
-            while (customers.size() > 0) {
-                Collections.shuffle(customers, new MersenneTwister());
-                customers.add(0, depot);
-                vehicles.add(new Knapsack(13, customers).getKnap());
-                customers.remove(depot);
-                vehiclesNum++;
-            }
-            clientele.put(0, depot);
+        Map<Integer, Customer> clientele = Configuration.INSTANCE.customers;
+        ArrayList<Customer> customers = new ArrayList<>(clientele.values());
+        customers.remove(0);
+        ArrayList<ArrayList<Integer>> vehicles = new ArrayList<>();
+        int vehiclesNum = 0, seats = 10;
+        while (!customers.isEmpty()) {
+            Collections.shuffle(customers, new MersenneTwister());
+            vehicles.add(new Knapsack(seats, customers).getKnap());
+            vehicles.get(vehiclesNum).add(0, 0);
+            vehicles.get(vehiclesNum).add(0);
+            vehiclesNum++;
+        }
 
-            double overallDistance = 0;
-            for (ArrayList<Integer> car : vehicles) {
-                double totDist = 0, demand = 0, overlap = 0;
-                System.out.println(car);
-                for (int i=0; i<car.size()-1; i++) {
-                    totDist += clientele.get(car.get(i)).distance(clientele.get(car.get(i+1)));
-                    demand += clientele.get(car.get(i)).getDemand();
-                }
-                for (int i=1; i<car.size()-2; i++) {
-                    for (int j=i+1; j<car.size()-1;j++){
-                        if (clientele.get(car.get(i)).overlaps(clientele.get(car.get(j)))) {
-                            overlap++;
-                            System.out.println(clientele.get(car.get(i))+" overlaps "+clientele.get(car.get(j)));
-                        }
+        double overallDistance = 0;
+        for (ArrayList<Integer> car : vehicles) {
+            double totDist = 0, demand = 0, overlap = 0;
+            System.out.println(car);
+            for (int i=0; i<car.size()-1; i++) {
+                totDist += clientele.get(car.get(i)).distance(clientele.get(car.get(i+1)));
+                demand += clientele.get(car.get(i)).getDemand();
+            }
+            for (int i=1; i<car.size()-2; i++) {
+                for (int j=i+1; j<car.size()-1;j++){
+                    if (clientele.get(car.get(i)).overlaps(clientele.get(car.get(j)))) {
+                        overlap++;
+                        System.out.println(clientele.get(car.get(i))+" overlaps "+clientele.get(car.get(j)));
                     }
                 }
-                System.out.println("Overlaps: "+overlap);
-                System.out.println("Carrying "+ (car.size()-2));
-                System.out.println("Has Total Demand: "+demand);
-                System.out.println("Has Total Distance: "+totDist);
-                System.out.println();
-                overallDistance += totDist;
             }
-            System.out.println("Fleet Size: "+vehiclesNum);
-            System.out.println("Distance Covered: "+overallDistance);
-            //TOTAL DEMAND 1458
-            //maxX 67; maxY 77
-            //Minimum Fleet size 12 and 14
-            //Minimum distance: round-a-bout 3400-3750
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
+            System.out.println("Overlaps: "+overlap);
+            System.out.println("Carrying "+ (car.size()-2));
+            System.out.println("Has Total Demand: "+demand);
+            System.out.println("Has Total Distance: "+totDist);
+            System.out.println();
+            overallDistance += totDist;
         }
+        System.out.println("Fleet Size: "+vehiclesNum);
+        System.out.println("Distance Covered: "+overallDistance);
+        //TOTAL DEMAND 1458
+        //maxX 67; maxY 77
+        //Minimum Fleet size 15
+        //Avg distance: more or less 3700
     }
 }

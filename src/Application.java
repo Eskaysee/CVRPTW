@@ -17,15 +17,15 @@ public class Application {
         DecimalFormat decimalFormat = new DecimalFormat("000000");
         long runtimeStart = System.nanoTime();
 
-        Fleet fleet = new Fleet(
-                Configuration.INSTANCE.fleetSize,
+        Population population = new Population(
+                Configuration.INSTANCE.populationSize,
                 Configuration.INSTANCE.elitismRatio,
                 Configuration.INSTANCE.mutationRatio,
                 Configuration.INSTANCE.crossoverRatio
         );
 
         int i = 0;
-        Vehicle bestVehicle = fleet.getFleet()[0];
+        Individual bestIndividual = population.getPopulation()[0];
 
         try {
             FileHandler fh = new    FileHandler(Configuration.INSTANCE.logFile);
@@ -36,21 +36,19 @@ public class Application {
             fh.setFormatter(formatter);
             log.addHandler(fh);
 
-            double initDistance = fleet.totalDistance();
-
-//            while ((i++ <= Configuration.INSTANCE.maximumNumberOfGenerations) && (bestVehicle.getFitness() != 0)) {
-            while ((i++ <= Configuration.INSTANCE.maximumNumberOfIterations) && (bestVehicle.getFitness() != 0)) {
-                System.out.println("generation " + decimalFormat.format(i) + " : " + Arrays.toString(bestVehicle.getGenes()) + ", fitness = " + bestVehicle.getFitness());
-                fleet.evolve();
-                bestVehicle = fleet.getFleet()[0];
+//            while ((i++ <= Configuration.INSTANCE.maximumNumberOfGenerations) && (bestIndividual.getFitness() != 0)) {
+            while ((i++ <= Configuration.INSTANCE.maximumNumberOfIterations) && (bestIndividual.getFitness() != 0)) {
+                System.out.println("generation " + decimalFormat.format(i) + " : " + Arrays.toString(bestIndividual.getGenes()) + ", fitness = " + bestIndividual.getFitness());
+                population.evolve();
+                bestIndividual = population.getPopulation()[0];
             }
 
-            log.info("Initial Distance          : " + initDistance);
-            log.info("generation                  : " + decimalFormat.format(i) + " : " + Arrays.toString(bestVehicle.getGenes()));
-            log.info("Sum Total Distance          : " + fleet.totalDistance());
+            log.info("generation                  : " + decimalFormat.format(i) + " : " + Arrays.toString(bestIndividual.getGenes()));
+            log.info("FleetSize                   : " + bestIndividual.getFleetSize());
+            log.info("Sum Total Distance          : " + bestIndividual.getDistance());
             log.info("runtime                     : " + (System.nanoTime() - runtimeStart) + " ns");
-            log.info("numberOfCrossoverOperations : " + fleet.getNumberOfCrossoverOperations());
-            log.info("numberOfMutationOperations  : " + fleet.getNumberOfMutationOperations());
+            log.info("numberOfCrossoverOperations : " + population.getNumberOfCrossoverOperations());
+            log.info("numberOfMutationOperations  : " + population.getNumberOfMutationOperations());
 
             fh.close();
         } catch (IOException e) {

@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -14,10 +15,11 @@ public enum Configuration {
     public final String logFile = userDirectory + fileSeparator + "logs" + fileSeparator + "CVRPTW.log";
     public final MersenneTwister randomGenerator = new MersenneTwister(System.currentTimeMillis());
     public final Map<Integer, Customer> customers = clientData();
-
-    public final int fleetSize = 8;//9;//10;//12;//13;//15;
-    public final int maximumNumberOfGenerations = 43;
+    public final double[][] distanceMatrix = makeDistanceMatrix();
+    public final int populationSize = 16;
     public final int maximumNumberOfIterations = 10000;
+    public final int vehicleLifetime = 230;
+    public final int maximumNumberOfGenerations = maximumNumberOfIterations/vehicleLifetime;
     public final int numberOfCustomers = 100;
     public final int vehicleCapacity = 200;
     //Genetic Algorithm Parameters
@@ -44,5 +46,25 @@ public enum Configuration {
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private double distance(int client1, int client2) {
+        double deltaX = customers.get(client1).getCoord()[0] - customers.get(client2).getCoord()[0];
+        double deltaY = customers.get(client1).getCoord()[1] - customers.get(client2).getCoord()[1];
+        double Xsqrd = deltaX * deltaX;
+        double Ysqrd = deltaY * deltaY;
+        return Math.sqrt(Xsqrd + Ysqrd);
+    }
+
+    private double[][] makeDistanceMatrix() {
+        double[][] distanceMatrix = new double[numberOfCustomers+1][numberOfCustomers+1];
+        for (int i=0; i<=numberOfCustomers; i++) distanceMatrix[i][i] = 0;
+        for (int i=0; i<=numberOfCustomers; i++) {
+            for (int j=i+1; j<=numberOfCustomers; j++) {
+                distanceMatrix[i][j] = distance(i,j);
+                distanceMatrix[j][i] = distanceMatrix[i][j];
+            }
+        }
+        return distanceMatrix;
     }
 }

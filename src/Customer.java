@@ -1,4 +1,4 @@
-public class Customer implements Comparable<Customer> {
+public final class Customer implements Comparable<Customer> {
     private final int id;
     private final double[] coord;
     private final double demand;
@@ -42,8 +42,8 @@ public class Customer implements Comparable<Customer> {
     }
 
     public boolean overlaps(Customer other) { //true if times overlap by more than 2
-        if (this.compareTo(other)<0) return other.readyTime+1 < this.dueTime-1;
-        else if (this.compareTo(other)>0) return this.readyTime+1 < other.dueTime-1;
+        if (this.compareTo(other)<0) return other.readyTime < this.dueTime;
+        else if (this.compareTo(other)>0) return this.readyTime < other.dueTime;
         return true;
     }
 
