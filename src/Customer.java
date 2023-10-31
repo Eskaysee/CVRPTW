@@ -36,23 +36,27 @@ public final class Customer implements Comparable<Customer> {
         return demand;
     }
 
+    public double getReadyTime() {
+        return readyTime;
+    }
+
+    public double getDueTime() {
+        return dueTime;
+    }
+
+    public double getServiceTime() {
+        return serviceTime;
+    }
+
     @Override
     public int compareTo(Customer o) {
         return Double.compare(this.readyTime, o.readyTime);
     }
 
-    public boolean overlaps(Customer other) { //true if times overlap by more than 2
+    public boolean overlaps(Customer other) {
         if (this.compareTo(other)<0) return other.readyTime < this.dueTime;
         else if (this.compareTo(other)>0) return this.readyTime < other.dueTime;
         return true;
-    }
-
-    public double distance(Customer other) {
-        double deltaX = coord[0] - other.getCoord()[0];
-        double deltaY = coord[1] - other.getCoord()[1];
-        double Xsqrd = deltaX * deltaX;
-        double Ysqrd = deltaY * deltaY;
-        return Math.sqrt(Xsqrd + Ysqrd);
     }
 
     @Override

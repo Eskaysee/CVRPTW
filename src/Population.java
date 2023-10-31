@@ -19,14 +19,14 @@ public class Population {
 
         population = new Individual[size];
 
-        int[] fleetSize = {50, 25, 20, 10, 17, 15, 13, 12};
+        int[] initFleet = {50, 25, 20, 10, 17, 15, 13, 12};
 
         for (int i = 0; i < size; i++) {
-            population[i] = new Individual(fleetSize[i%8]);
+            population[i] = new Individual(initFleet[i%8]);
         }
 
         Arrays.sort(population);
-        this.wheel = roulette2();
+        this.wheel = roulette();
 //        Map<Individual, Float> wheel2 = roulette2();
     }
 
@@ -75,7 +75,7 @@ public class Population {
 
         Arrays.sort(individualArray);
         population = individualArray;
-        this.wheel = roulette2();
+        this.wheel = roulette();
     }
 
     public Individual[] getPopulation() {
@@ -107,18 +107,20 @@ public class Population {
     }
 
     private Map<Individual, Float> roulette() {
-        double[] transFitness = scaleFitness();
+        Individual[] validIndivs = Arrays.stream(population).filter(Individual::validity).toArray(Individual[]::new);
+        double[] transFitness = scaleFitness(validIndivs);
         double totalFitness = Arrays.stream(transFitness).sum();
         Map<Individual, Float> probs = new LinkedHashMap<>();
         float cdf = 0.0F;
         for (int i=0; i<population.length; i++) {
+            if (!population[i].validity()) continue;
             cdf += (float) (transFitness[i] / totalFitness);
             probs.put(population[i], cdf);
         }
         return probs;
     }
 
-    private double[] scaleFitness() {
+    private double[] scaleFitness(Individual[] population) {
         double[] transformedFitness = new double[population.length];
         double max = Arrays.stream(population).mapToDouble(Individual::getFitness).max().getAsDouble();
         double min = Arrays.stream(population).mapToDouble(Individual::getFitness).min().getAsDouble();
@@ -126,28 +128,19 @@ public class Population {
         for (int i=0,j=population.length-1; i<population.length && j >=0; i++,j--) {
             double trans1 = max - (scaleFactor * i);
             double trans2 = (min + max) - population[i].getFitness();
-            transformedFitness[i] = (trans1 + trans2 + population[j].getFitness())/3;
+            transformedFitness[i] = (trans1 + trans2 + 2*population[j].getFitness())/4;
         }
         return transformedFitness;
     }
 
     private Map<Individual, Float> roulette2() {
-        double[] transFitness = scaleFitness2();
-        double totalFitness = Arrays.stream(transFitness).sum();
+        double totalFitness = Arrays.stream(population).mapToDouble(Individual::getFitness).sum();
         Map<Individual, Float> probs = new LinkedHashMap<>();
         float cdf = 0.0F;
-        for (int i=0; i<population.length; i++) {
-            cdf += (float) (transFitness[i] / totalFitness);
-            probs.put(population[i], cdf);
+        for (Individual indiv : population) {
+            cdf += (float) (indiv.getFitness() / totalFitness);
+            probs.put(indiv, cdf);
         }
         return probs;
-    }
-
-    private double[] scaleFitness2() {
-        double[] transformedFitness = new double[population.length];
-        for (int i=0,j=population.length-1; i<population.length && j >=0; i++,j--) {
-            transformedFitness[i] = population[j].getFitness();
-        }
-        return transformedFitness;
     }
 }

@@ -3,22 +3,27 @@ import java.util.Map;
 
 public class Vehicle implements Comparable<Vehicle>{
 
-    private final int[] load;
+    private int[] load;
     private final Map<Integer, Customer> customers = Configuration.INSTANCE.customers;
     private final double capacity = Configuration.INSTANCE.vehicleCapacity;
     private final double[][] distanceMatrix = Configuration.INSTANCE.distanceMatrix;
-    private int seats;
+    private double demand;
+    private double distance;
 
     //Constructor
-    public Vehicle(ArrayList<Customer> init, int seats) {
-        this.load = generateGene(seats, init);
+    public Vehicle(ArrayList<Customer> init, int trunkSpace) {
+        this.load = assignClients(trunkSpace, init);
+        this.demand = calcDemand();
+        this.distance = calcDistance();
     }
 
-    public Vehicle(int[] chromosome) {
-        this.load = chromosome;
+    public Vehicle(int[] clients) {
+        this.load = clients;
+        this.demand = calcDemand();
+        this.distance = calcDistance();
     }
 
-    public double getDistance() {
+    private double calcDistance() {
         double totDist = 0;
         for (int i = 0; i< load.length-1; i++) {
             totDist += distanceMatrix[load[i]][load[i+1]];
@@ -26,12 +31,12 @@ public class Vehicle implements Comparable<Vehicle>{
         return totDist;
     }
 
-    private int[] generateGene(int seats, ArrayList<Customer> init) {
+    private int[] assignClients(int initTrunkSpace, ArrayList<Customer> init) {
         ArrayList<Customer> load = new ArrayList<>();
         int i=0;
         while (
                 !init.isEmpty()
-                && load.size()<seats
+                && load.size()<initTrunkSpace
         ) {
             load.add(init.remove(0));
         }
@@ -41,7 +46,7 @@ public class Vehicle implements Comparable<Vehicle>{
         return load.stream().mapToInt(Customer::getId).toArray();
     }
 
-    public double getDemand() {
+    private double calcDemand() {
         double demand = 0.0D;
         for (int client : load) {
             demand += customers.get(client).getDemand();
@@ -49,23 +54,122 @@ public class Vehicle implements Comparable<Vehicle>{
         return demand;
     }
 
-    public int getOverlaps() {
-        int overlap = 0;
-        for (int i=1; i<load.length-2; i++) {
-            for (int j=i+1; j<load.length-1; j++) {
-                if (customers.get(load[i]).overlaps(customers.get(load[j]))) overlap++;
+    public ArrayList<Integer> makeValid() {
+        double time = 0, currentDemand = 0;
+        ArrayList<Integer> served = new ArrayList<>();
+        ArrayList<Integer> unserved = new ArrayList<>();
+        served.add(0);
+        for (int j=1, i=0; j<load.length; j++) {
+            time += distanceMatrix[served.get(i)][load[j]];
+            if (currentDemand + customers.get(load[j]).getDemand() > capacity) {
+                unserved.add(load[j]);
+                time -= distanceMatrix[served.get(i)][load[j]];
+            } else if (time < customers.get(load[j]).getDueTime()) {
+                if (time < customers.get(load[j]).getReadyTime())
+                    time += customers.get(load[j]).getReadyTime() - time;
+                time += customers.get(load[j]).getServiceTime();
+                currentDemand += customers.get(load[j]).getDemand();
+                served.add(load[j]);
+                i++;
+            } else {
+                unserved.add(load[j]);
+                time -= distanceMatrix[served.get(i)][load[j]];
             }
         }
-        return overlap;
+        this.load = served.stream().mapToInt(i -> i).toArray();
+        this.demand = calcDemand();
+        this.distance = calcDistance();
+        return unserved;
+    }
+
+    public boolean insert(int client) {
+        double newDemand = this.demand + customers.get(client).getDemand();
+        if (newDemand > capacity) return false;
+        ArrayList<Customer> newLoad = new ArrayList<>();
+        for (int customer : load) {
+            if (customer == 0) continue;
+            if (customers.get(customer).overlaps(customers.get(client)))
+                return false;
+            if (customers.get(client).compareTo(customers.get(customer))<0) {
+
+            }
+            newLoad.add(customers.get(customer));
+        }
+        newLoad.add(customers.get(client));
+        newLoad.sort(null);
+        newLoad.add(0, customers.get(0));
+        newLoad.add(customers.get(0));
+        int index  = newLoad.indexOf(customers.get(client));
+        if (onTime(newLoad, index)) {
+            this.load = newLoad.stream().mapToInt(Customer::getId).toArray();
+            this.demand = calcDemand();
+            this.distance = calcDistance();
+            return true;
+        } else return false;
+    }
+
+    public boolean onTime(ArrayList<Customer> currentLoad, int index) {
+        double time = 0;
+        for (int i=0; i<=index; i++) {
+            time += distanceMatrix[currentLoad.get(i).getId()][currentLoad.get(i+1).getId()];
+            if (time < currentLoad.get(i+1).getDueTime()) {
+                if (currentLoad.get(i+1).getId() != 0 && time < currentLoad.get(i+1).getReadyTime())
+                    time += currentLoad.get(i+1).getReadyTime() - time;
+                time += currentLoad.get(i+1).getServiceTime();
+            } else return false;
+        }
+        return true;
+    }
+
+    public boolean forcedInsert(int client) {
+        double newDemand = this.demand + customers.get(client).getDemand();
+        if (newDemand > capacity) return false;
+        ArrayList<Customer> newLoad = new ArrayList<>();
+        for (int customer : load) {
+            if (customer == 0) continue;
+            if (customers.get(customer).overlaps(customers.get(client)))
+                return false;
+            newLoad.add(customers.get(customer));
+        }
+        newLoad.add(customers.get(client));
+        newLoad.sort(null);
+        newLoad.add(0, customers.get(0));
+        newLoad.add(customers.get(0));
+        this.load = newLoad.stream().mapToInt(Customer::getId).toArray();
+        this.demand = calcDemand();
+        this.distance = calcDistance();
+        return true;
+    }
+
+    public int getLate() {
+        int late = 0;
+        double time = 0;
+        for (int i=0; i<load.length-1; i++) {
+            time += distanceMatrix[load[i]][load[i+1]];
+            if (time < customers.get(load[i+1]).getDueTime()) {
+                if (load[i+1] != 0 && time < customers.get(load[i+1]).getReadyTime())
+                    time += customers.get(load[i+1]).getReadyTime() - time;
+                time += customers.get(load[i+1]).getServiceTime();
+            } else late++;
+        }
+        return late;
     }
 
     public int[] getLoad() {
         return load;
     }
 
+    public boolean overloaded() {
+        return demand>capacity;
+    }
+
+    public double getDistance() {
+        return distance;
+    }
+
     //Orders vehicles by ascending distance travelled
     @Override
     public int compareTo(Vehicle other) {
-        return Double.compare(this.getDistance(), other.getDistance());
+        return Double.compare(this.distance, other.getDistance());
     }
 }

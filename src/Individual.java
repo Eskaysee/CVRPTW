@@ -7,8 +7,9 @@ public class Individual implements Comparable<Individual> {
     private final int[] chromosome;
     private final double fitness;
     private final Vehicle[] fleet;
-
-    private final Map<Integer, Customer> clients = Configuration.INSTANCE.customers;;
+    private boolean isValid = true;
+    private final Map<Integer, Customer> clients = Configuration.INSTANCE.customers;
+    private int overloaded, late;
 
     public Individual(int fleetSize) {
         ArrayList<Vehicle> trucks = new ArrayList<>(fleetSize);
@@ -20,23 +21,18 @@ public class Individual implements Comparable<Individual> {
             seats = Configuration.INSTANCE.numberOfCustomers/fleetSize;
         else seats = Configuration.INSTANCE.numberOfCustomers/fleetSize + 1;
 
-        while (customers.size() > 0) {
+        while (!customers.isEmpty()) {
             Collections.shuffle(customers, Configuration.INSTANCE.randomGenerator);
             trucks.add(new Vehicle(customers, seats));
         }
         trucks.sort(null);
+
         this.fleet = trucks.toArray(new Vehicle[0]);
-        this.chromosome = new int[Configuration.INSTANCE.numberOfCustomers];
-        for (Vehicle truck : fleet) {
-            for (int customer : truck.getLoad()) {
-                if (customer != 0) chromosome[customer - 1] = trucks.indexOf(truck);
-            }
-        }
+        this.chromosome = setChromosome();
         this.fitness = calculateFitness();
     }
 
     public Individual(int[] chromosome) {
-        this.chromosome = chromosome;
         int fleetSize = Arrays.stream(chromosome).max().getAsInt() + 1;
         ArrayList<Customer>[] vehicleLoads = new ArrayList[fleetSize];
         for (int i=0; i<fleetSize; i++) vehicleLoads[i] = new ArrayList<>();
@@ -44,29 +40,71 @@ public class Individual implements Comparable<Individual> {
             vehicleLoads[chromosome[i]].add(clients.get(i+1));
         }
         int i = 0;
+        fleetSize = (int) Arrays.stream(vehicleLoads).filter(x -> !x.isEmpty()).count();
         this.fleet = new Vehicle[fleetSize];
         for (ArrayList<Customer> load : vehicleLoads) {
+            if (load.isEmpty()) continue;
             load.sort(null);
             load.add(0,clients.get(0));
             load.add(clients.get(0));
             fleet[i++] = new Vehicle(load.stream().mapToInt(Customer::getId).toArray());
         }
         this.fitness = calculateFitness();
+        this.chromosome = setChromosome();
+    }
+
+    private int[] setChromosome() {
+        int[] chromosome = new int[Configuration.INSTANCE.numberOfCustomers];
+        for (int i=0; i<fleet.length; i++) {
+            for (int customer : fleet[i].getLoad()) {
+                if (customer != 0) chromosome[customer - 1] = i;
+            }
+        }
+        return chromosome;
+    }
+
+    private void repairFleet() {
+        ArrayList<Integer> unserved = new ArrayList<>();
+        for (Vehicle truck : fleet) {
+            unserved.addAll(truck.makeValid());
+        }
+        for (int i=0; i<unserved.size(); i++) {
+            for (Vehicle truck : fleet) {
+                if (truck.insert(unserved.get(i))) {
+                    unserved.remove(i);
+                    i--;
+                    break;
+                }
+            }
+        }
+        if (!unserved.isEmpty()) {
+            for (int i=0; i<unserved.size(); i++) {
+                for (Vehicle truck : fleet) {
+                    if (truck.forcedInsert(unserved.get(i))) {
+                        unserved.remove(i);
+                        i--;
+                        break;
+                    }
+                }
+            }
+        }
+        if  (!unserved.isEmpty()) isValid = false;
+        Arrays.sort(fleet);
     }
 
     // fitness
     private double calculateFitness() {
-        double distance = 0, overloaded = 0;
-        int overlaps=0, emptyTrucks = 0;
+        repairFleet();
+        if (!isValid) return 500000;
+        double distance = 0;
+        int late=0, overloaded = 0;
         for (Vehicle truck : fleet) {
             distance += truck.getDistance();
-            if (truck.getDistance()==0) emptyTrucks++;
-            if (truck.getDemand()>Configuration.INSTANCE.vehicleCapacity)
-                overloaded+= truck.getDemand()-Configuration.INSTANCE.vehicleCapacity;
-            else overloaded+=0;
-            overlaps += truck.getOverlaps();
+            late += truck.getLate();
+            if (truck.overloaded()) overloaded++;
         }
-        return distance + 50*emptyTrucks + 25*overloaded + 10*overlaps + 3*fleet.length;
+        this.late = late; this.overloaded = overloaded;
+        return distance + 200*late + 25*fleet.length;
     }
 
     // crossover
@@ -93,13 +131,17 @@ public class Individual implements Comparable<Individual> {
         Collections.shuffle(subsetList, Configuration.INSTANCE.randomGenerator);
         int[] mutant = new int[chromosome.length];
         System.arraycopy(chromosome,0,mutant,0,32);
-        System.arraycopy(subsetList.stream().mapToInt(Integer::intValue).toArray(),0,mutant,32,35);
+        System.arraycopy(subsetList.stream().mapToInt(i -> i).toArray(),0,mutant,32,35);
         System.arraycopy(chromosome,67,mutant,67,33);
         return new Individual(mutant);
     }
 
     public int[] getGenes() {
         return chromosome;
+    }
+
+    public boolean validity() {
+        return isValid;
     }
 
     public int getFleetSize() {
