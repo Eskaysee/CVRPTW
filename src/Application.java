@@ -37,15 +37,19 @@ public class Application {
             log.addHandler(fh);
 
 //            while ((i++ <= Configuration.INSTANCE.maximumNumberOfGenerations) && (bestIndividual.getFitness() != 0)) {
-            while ((i++ <= Configuration.INSTANCE.maximumNumberOfIterations) && (bestIndividual.getFitness() != 0)) {
+            while (
+                    (i++ <= Configuration.INSTANCE.maximumNumberOfIterations)
+                    && !optimum(bestIndividual)
+                    && !population.isConverged()
+            ) {
                 System.out.println("generation " + decimalFormat.format(i) + " : " + Arrays.toString(bestIndividual.getGenes()) + ", fitness = " + bestIndividual.getFitness());
                 population.evolve();
                 bestIndividual = population.getPopulation()[0];
             }
 
             log.info("generation                  : " + decimalFormat.format(i) + " : " + Arrays.toString(bestIndividual.getGenes()));
-            log.info("FleetSize                   : " + bestIndividual.getFleetSize());
-            log.info("Sum Total Distance          : " + bestIndividual.getDistance());
+            log.info("Best Individual             : " + bestIndividual);
+//            log.info("Sum Total Distance          : " + bestIndividual.getDistance());
             log.info("runtime                     : " + (System.nanoTime() - runtimeStart) + " ns");
             log.info("numberOfCrossoverOperations : " + population.getNumberOfCrossoverOperations());
             log.info("numberOfMutationOperations  : " + population.getNumberOfMutationOperations());
@@ -54,6 +58,15 @@ public class Application {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static boolean optimum(Individual bestIndividual) {
+        double min = 1646 * 0.95;
+        double max = 1646 * 1.05;
+        if (min <= bestIndividual.getDistance()) {
+            return bestIndividual.getDistance() <= max;
+        }
+        return false;
     }
 }
 

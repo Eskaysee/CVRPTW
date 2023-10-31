@@ -12,6 +12,8 @@ public class Population {
 
     private Map<Individual, Float> wheel;
 
+    private boolean converged = false;
+
     public Population(int size, double crossoverRatio, double elitismRatio, double mutationRatio) {
         this.crossoverRatio = crossoverRatio;
         this.elitismRatio = elitismRatio;
@@ -19,15 +21,12 @@ public class Population {
 
         population = new Individual[size];
 
-        int[] initFleet = {50, 25, 20, 10, 17, 15, 13, 12};
-
         for (int i = 0; i < size; i++) {
-            population[i] = new Individual(initFleet[i%8]);
+            population[i] = new Individual();
         }
 
         Arrays.sort(population);
         this.wheel = roulette();
-//        Map<Individual, Float> wheel2 = roulette2();
     }
 
     public int getNumberOfCrossoverOperations() {
@@ -74,8 +73,12 @@ public class Population {
         }
 
         Arrays.sort(individualArray);
-        population = individualArray;
+        this.population = individualArray;
         this.wheel = roulette();
+
+        int count = (int) Arrays.stream(population).filter(Individual::validity).count();
+        if (count == 1)
+            converged = true;
     }
 
     public Individual[] getPopulation() {
@@ -101,46 +104,33 @@ public class Population {
                         } else previousIndiv = indiv;
                     } else previousIndiv = indiv;
                 }
+//                System.out.println("iteration: " + i + " spin: "+ spin + " fleet: " + population.length);
             } while (i==1 && parents[0].equals(parents[1]));
         }
         return parents;
     }
 
     private Map<Individual, Float> roulette() {
-        Individual[] validIndivs = Arrays.stream(population).filter(Individual::validity).toArray(Individual[]::new);
-        double[] transFitness = scaleFitness(validIndivs);
-        double totalFitness = Arrays.stream(transFitness).sum();
+        double[] scaledFitness = scaleFitness();
+        double totalFitness = Arrays.stream(scaledFitness).sum();
         Map<Individual, Float> probs = new LinkedHashMap<>();
         float cdf = 0.0F;
         for (int i=0; i<population.length; i++) {
-            if (!population[i].validity()) continue;
-            cdf += (float) (transFitness[i] / totalFitness);
+            cdf += (float) (scaledFitness[i] / totalFitness);
             probs.put(population[i], cdf);
         }
         return probs;
     }
 
-    private double[] scaleFitness(Individual[] population) {
+    private double[] scaleFitness() {
         double[] transformedFitness = new double[population.length];
-        double max = Arrays.stream(population).mapToDouble(Individual::getFitness).max().getAsDouble();
-        double min = Arrays.stream(population).mapToDouble(Individual::getFitness).min().getAsDouble();
-        double scaleFactor = (max-min)/(population.length-1);
-        for (int i=0,j=population.length-1; i<population.length && j >=0; i++,j--) {
-            double trans1 = max - (scaleFactor * i);
-            double trans2 = (min + max) - population[i].getFitness();
-            transformedFitness[i] = (trans1 + trans2 + 2*population[j].getFitness())/4;
+        for (int i=0; i<population.length; i++) {
+            transformedFitness[i] = 6000 - population[i].getFitness();
         }
         return transformedFitness;
     }
 
-    private Map<Individual, Float> roulette2() {
-        double totalFitness = Arrays.stream(population).mapToDouble(Individual::getFitness).sum();
-        Map<Individual, Float> probs = new LinkedHashMap<>();
-        float cdf = 0.0F;
-        for (Individual indiv : population) {
-            cdf += (float) (indiv.getFitness() / totalFitness);
-            probs.put(indiv, cdf);
-        }
-        return probs;
+    public boolean isConverged() {
+        return converged;
     }
 }
