@@ -75,7 +75,7 @@ public class Vehicle implements Comparable<Vehicle>{
                 } else unserved.add(load[j]);
             } else if (time < customers.get(load[j]).getDueTime()) {
                 if (time < customers.get(load[j]).getReadyTime())
-                    time += customers.get(load[j]).getReadyTime() - time;
+                    time = customers.get(load[j]).getReadyTime();
                 time += customers.get(load[j]).getServiceTime();
                 freeSpace -= customers.get(load[j]).getDemand();
                 served.add(load[j]);
@@ -130,7 +130,7 @@ public class Vehicle implements Comparable<Vehicle>{
             }
             if (time < currentLoad.get(i+1).getDueTime()) {
                 if (currentLoad.get(i+1).getId() != 0 && time < currentLoad.get(i+1).getReadyTime())
-                    time += currentLoad.get(i+1).getReadyTime() - time;
+                    time = currentLoad.get(i+1).getReadyTime();
                 time += currentLoad.get(i+1).getServiceTime();
                 freeSpace -= currentLoad.get(i+1).getDemand();
             } else return false;
@@ -166,10 +166,9 @@ public class Vehicle implements Comparable<Vehicle>{
             time += distanceMatrix[load[i]][load[i+1]];
             if (time < customers.get(load[i+1]).getDueTime()) {
                 if (load[i+1] != 0 && time < customers.get(load[i+1]).getReadyTime())
-                    time += customers.get(load[i+1]).getReadyTime() - time;
+                    time = customers.get(load[i+1]).getReadyTime();
                 time += customers.get(load[i+1]).getServiceTime();
-            }
-            else late++;
+            } else late++;
         }
         return late;
     }

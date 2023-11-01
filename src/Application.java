@@ -42,13 +42,15 @@ public class Application {
                     && !optimum(bestIndividual)
                     && !population.isConverged()
             ) {
-                System.out.println("generation " + decimalFormat.format(i) + " : " + Arrays.toString(bestIndividual.getGenes()) + ", fitness = " + bestIndividual.getFitness());
+                System.out.println("generation " + decimalFormat.format(i) + " : " + Arrays.toString(population.getPopulation()[0].getGenes())
+                        + ", fitness = " + population.getPopulation()[0].getFitness());
                 population.evolve();
-                bestIndividual = population.getPopulation()[0];
+                if (population.getPopulation()[0].getFitness() < bestIndividual.getFitness()) {
+                    bestIndividual = population.getPopulation()[0];
+                }
             }
-
             log.info("generation                  : " + decimalFormat.format(i) + " : " + Arrays.toString(bestIndividual.getGenes()));
-            log.info("Best Individual             : " + bestIndividual);
+            log.info("Best Individua: \n" + bestIndividual);
 //            log.info("Sum Total Distance          : " + bestIndividual.getDistance());
             log.info("runtime                     : " + (System.nanoTime() - runtimeStart) + " ns");
             log.info("numberOfCrossoverOperations : " + population.getNumberOfCrossoverOperations());

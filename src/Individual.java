@@ -17,16 +17,17 @@ public class Individual implements Comparable<Individual> {
         ArrayList<Customer> customers = new ArrayList<>(clients.values());
         customers.remove(0);
 
-        int initialLenght = Configuration.INSTANCE.randomGenerator.nextInt(2, 11);
+        int initialLength = Configuration.INSTANCE.randomGenerator.nextInt(2, 11);
 
         while (!customers.isEmpty()) {
             Collections.shuffle(customers, Configuration.INSTANCE.randomGenerator);
-            trucks.add(new Vehicle(customers, initialLenght));
+            trucks.add(new Vehicle(customers, initialLength));
         }
         trucks.sort(null);
 
         this.fleet = trucks.toArray(new Vehicle[0]);
-        this.fitness = calculateFitness();
+        this.fitness = Math.min(6000, calculateFitness());
+        if (fitness==6000) isValid=false;
         this.chromosome = setChromosome();
     }
 
@@ -48,6 +49,7 @@ public class Individual implements Comparable<Individual> {
             fleet[i++] = new Vehicle(load.stream().mapToInt(Customer::getId).toArray());
         }
         this.fitness = Math.min(6000, calculateFitness());
+        if (fitness==6000) isValid=false;
         this.chromosome = setChromosome();
     }
 
@@ -61,11 +63,16 @@ public class Individual implements Comparable<Individual> {
         return chromosome;
     }
 
-    private void repairFleet() {
+    private int repairFleet() {
         ArrayList<Integer> unserved = new ArrayList<>();
         for (Vehicle truck : fleet) {
             unserved.addAll(truck.makeValid());
         }
+        if (unserved.isEmpty()) {
+            Arrays.sort(fleet);
+            return 0;
+        }
+        int reassignments = unserved.size();
         for (int i=0; i<unserved.size(); i++) {
             for (Vehicle truck : fleet) {
                 if (truck.insert(unserved.get(i))) {
@@ -75,14 +82,12 @@ public class Individual implements Comparable<Individual> {
                 }
             }
         }
-        if (unserved.size()<3) {
-            for (int i=0; i<unserved.size(); i++) {
-                for (Vehicle truck : fleet) {
-                    if (truck.insert(unserved.get(i))) {
-                        unserved.remove(i);
-                        i--;
-                        break;
-                    }
+        for (int i=0; i<unserved.size(); i++) {
+            for (Vehicle truck : fleet) {
+                if (truck.forcedInsert(unserved.get(i))) {
+                    unserved.remove(i);
+                    i--;
+                    break;
                 }
             }
         }
@@ -91,11 +96,12 @@ public class Individual implements Comparable<Individual> {
             this.late = unserved.size();
         }
         Arrays.sort(fleet);
+        return reassignments;
     }
 
     // fitness
     private double calculateFitness() {
-        repairFleet();
+        int reassignments = repairFleet();
         if (!isValid) return 6000;
         double distance = 0;
         int late=0, overloaded = 0;
@@ -106,7 +112,7 @@ public class Individual implements Comparable<Individual> {
         }
         this.late = late; this.overloaded = overloaded;
         this.distance = distance;
-        return distance + 200*late + 25*fleet.length;
+        return distance + 500*late;
     }
 
     // crossover
@@ -128,13 +134,13 @@ public class Individual implements Comparable<Individual> {
 
     // mutation
     public Individual mutation() {
-        ArrayList<Integer> subsetList = new ArrayList<>(36);
-        for (int i=32; i<=66; i++) subsetList.add(chromosome[i]);
+        ArrayList<Integer> subsetList = new ArrayList<>(50);
+        for (int i=25; i<75; i++) subsetList.add(chromosome[i]);
         Collections.shuffle(subsetList, Configuration.INSTANCE.randomGenerator);
         int[] mutant = new int[chromosome.length];
-        System.arraycopy(chromosome,0,mutant,0,32);
-        System.arraycopy(subsetList.stream().mapToInt(i -> i).toArray(),0,mutant,32,35);
-        System.arraycopy(chromosome,67,mutant,67,33);
+        System.arraycopy(chromosome,0,mutant,0,25);
+        System.arraycopy(subsetList.stream().mapToInt(i -> i).toArray(),0,mutant,25,50);
+        System.arraycopy(chromosome,75,mutant,75,25);
         return new Individual(mutant);
     }
 
