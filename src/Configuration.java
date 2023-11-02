@@ -15,7 +15,7 @@ public enum Configuration {
     public final MersenneTwister randomGenerator = new MersenneTwister(System.currentTimeMillis());
     public final Map<Integer, Customer> customers = clientData();
     public final double[][] distanceMatrix = makeDistanceMatrix();
-    public final int populationSize = 100;
+    public final int populationSize = 225;
     public final int maximumNumberOfIterations = 10000;
     public final int numberOfCustomers = 100;
     public final int vehicleCapacity = 200;

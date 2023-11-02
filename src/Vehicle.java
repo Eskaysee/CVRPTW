@@ -193,6 +193,6 @@ public class Vehicle implements Comparable<Vehicle>{
 
     @Override
     public String toString() {
-        return Arrays.toString(load);
+        return Arrays.toString(load) + '\n';
     }
 }

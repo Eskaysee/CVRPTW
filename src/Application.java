@@ -38,7 +38,7 @@ public class Application {
 
             while (
                     (i++ <= Configuration.INSTANCE.maximumNumberOfIterations)
-                    && !optimum(bestIndividual)
+//                    && !optimum(bestIndividual)
             ) {
                 System.out.println("generation " + decimalFormat.format(i) + " : " + Arrays.toString(population.getPopulation()[0].getGenes())
                         + ", fitness = " + population.getPopulation()[0].getFitness());
@@ -49,7 +49,6 @@ public class Application {
             }
             log.info("generation                  : " + decimalFormat.format(i) + " : " + Arrays.toString(bestIndividual.getGenes()));
             log.info("Best Individua: \n" + bestIndividual);
-//            log.info("Sum Total Distance          : " + bestIndividual.getDistance());
             log.info("runtime                     : " + (System.nanoTime() - runtimeStart) + " ns");
             log.info("numberOfCrossoverOperations : " + population.getNumberOfCrossoverOperations());
             log.info("numberOfMutationOperations  : " + population.getNumberOfMutationOperations());
