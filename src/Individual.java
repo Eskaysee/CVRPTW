@@ -48,6 +48,7 @@ public class Individual implements Comparable<Individual> {
             load.add(clients.get(0));
             fleet[i++] = new Vehicle(load.stream().mapToInt(Customer::getId).toArray());
         }
+        Arrays.sort(fleet);
         this.fitness = Math.min(6000, calculateFitness());
         if (fitness==6000) isValid=false;
         this.chromosome = setChromosome();
@@ -63,31 +64,33 @@ public class Individual implements Comparable<Individual> {
         return chromosome;
     }
 
-    private int repairFleet() {
+    private void repairFleet() {
         ArrayList<Integer> unserved = new ArrayList<>();
         for (Vehicle truck : fleet) {
             unserved.addAll(truck.makeValid());
         }
         if (unserved.isEmpty()) {
             Arrays.sort(fleet);
-            return 0;
-        }
-        int reassignments = unserved.size();
-        for (int i=0; i<unserved.size(); i++) {
-            for (Vehicle truck : fleet) {
-                if (truck.insert(unserved.get(i))) {
-                    unserved.remove(i);
-                    i--;
-                    break;
+            return;
+        } else {
+            for (int i=0; i<unserved.size(); i++) {
+                for (Vehicle truck : fleet) {
+                    if (truck.insert(unserved.get(i))) {
+                        unserved.remove(i);
+                        i--;
+                        break;
+                    }
                 }
             }
-        }
-        for (int i=0; i<unserved.size(); i++) {
-            for (Vehicle truck : fleet) {
-                if (truck.forcedInsert(unserved.get(i))) {
-                    unserved.remove(i);
-                    i--;
-                    break;
+            if (!unserved.isEmpty()) {
+                for (int i=0; i<unserved.size(); i++) {
+                    for (Vehicle truck : fleet) {
+                        if (truck.forcedInsert(unserved.get(i))) {
+                            unserved.remove(i);
+                            i--;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -96,12 +99,11 @@ public class Individual implements Comparable<Individual> {
             this.late = unserved.size();
         }
         Arrays.sort(fleet);
-        return reassignments;
     }
 
     // fitness
     private double calculateFitness() {
-        int reassignments = repairFleet();
+        repairFleet();
         if (!isValid) return 6000;
         double distance = 0;
         int late=0, overloaded = 0;

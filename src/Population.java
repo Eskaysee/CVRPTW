@@ -75,10 +75,6 @@ public class Population {
         Arrays.sort(individualArray);
         this.population = individualArray;
         this.wheel = roulette();
-
-        int count = (int) Arrays.stream(population).filter(Individual::validity).count();
-        if (count == 1)
-            converged = true;
     }
 
     public Individual[] getPopulation() {
@@ -104,7 +100,6 @@ public class Population {
                         } else previousIndiv = indiv;
                     } else previousIndiv = indiv;
                 }
-//                System.out.println("iteration: " + i + " spin: "+ spin + " fleet: " + population.length);
             } while (i==1 && parents[0].equals(parents[1]));
         }
         return parents;
@@ -128,9 +123,5 @@ public class Population {
             transformedFitness[i] = 6000 - population[i].getFitness();
         }
         return transformedFitness;
-    }
-
-    public boolean isConverged() {
-        return converged;
     }
 }

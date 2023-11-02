@@ -19,9 +19,9 @@ public class Application {
 
         Population population = new Population(
                 Configuration.INSTANCE.populationSize,
+                Configuration.INSTANCE.crossoverRatio,
                 Configuration.INSTANCE.elitismRatio,
-                Configuration.INSTANCE.mutationRatio,
-                Configuration.INSTANCE.crossoverRatio
+                Configuration.INSTANCE.mutationRatio
         );
 
         int i = 0;
@@ -36,11 +36,9 @@ public class Application {
             fh.setFormatter(formatter);
             log.addHandler(fh);
 
-//            while ((i++ <= Configuration.INSTANCE.maximumNumberOfGenerations) && (bestIndividual.getFitness() != 0)) {
             while (
                     (i++ <= Configuration.INSTANCE.maximumNumberOfIterations)
                     && !optimum(bestIndividual)
-                    && !population.isConverged()
             ) {
                 System.out.println("generation " + decimalFormat.format(i) + " : " + Arrays.toString(population.getPopulation()[0].getGenes())
                         + ", fitness = " + population.getPopulation()[0].getFitness());
