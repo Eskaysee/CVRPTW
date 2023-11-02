@@ -12,8 +12,6 @@ public class Population {
 
     private Map<Individual, Float> wheel;
 
-    private boolean converged = false;
-
     public Population(int size, double crossoverRatio, double elitismRatio, double mutationRatio) {
         this.crossoverRatio = crossoverRatio;
         this.elitismRatio = elitismRatio;
@@ -120,7 +118,7 @@ public class Population {
     private double[] scaleFitness() {
         double[] transformedFitness = new double[population.length];
         for (int i=0; i<population.length; i++) {
-            transformedFitness[i] = 6000 - population[i].getFitness();
+            transformedFitness[i] = 15000 - population[i].getFitness();
         }
         return transformedFitness;
     }

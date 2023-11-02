@@ -17,7 +17,7 @@ public class Individual implements Comparable<Individual> {
         ArrayList<Customer> customers = new ArrayList<>(clients.values());
         customers.remove(0);
 
-        int initialLength = Configuration.INSTANCE.randomGenerator.nextInt(2, 11);
+        int initialLength = Configuration.INSTANCE.randomGenerator.nextInt(2, 8);
 
         while (!customers.isEmpty()) {
             Collections.shuffle(customers, Configuration.INSTANCE.randomGenerator);
@@ -26,8 +26,8 @@ public class Individual implements Comparable<Individual> {
         trucks.sort(null);
 
         this.fleet = trucks.toArray(new Vehicle[0]);
-        this.fitness = Math.min(6000, calculateFitness());
-        if (fitness==6000) isValid=false;
+        this.fitness = Math.min(15000, calculateFitness());
+        if (fitness==15000) isValid=false;
         this.chromosome = setChromosome();
     }
 
@@ -49,8 +49,8 @@ public class Individual implements Comparable<Individual> {
             fleet[i++] = new Vehicle(load.stream().mapToInt(Customer::getId).toArray());
         }
         Arrays.sort(fleet);
-        this.fitness = Math.min(6000, calculateFitness());
-        if (fitness==6000) isValid=false;
+        this.fitness = Math.min(15000, calculateFitness());
+        if (fitness==15000) isValid=false;
         this.chromosome = setChromosome();
     }
 
@@ -92,6 +92,9 @@ public class Individual implements Comparable<Individual> {
                         }
                     }
                 }
+            } else {
+                Arrays.sort(fleet);
+                return;
             }
         }
         if  (!unserved.isEmpty()) {
@@ -104,7 +107,7 @@ public class Individual implements Comparable<Individual> {
     // fitness
     private double calculateFitness() {
         repairFleet();
-        if (!isValid) return 6000;
+        if (!isValid) return 15000;
         double distance = 0;
         int late=0, overloaded = 0;
         for (Vehicle truck : fleet) {
@@ -114,7 +117,7 @@ public class Individual implements Comparable<Individual> {
         }
         this.late = late; this.overloaded = overloaded;
         this.distance = distance;
-        return distance + 500*late;
+        return distance + 1000*late;
     }
 
     // crossover
@@ -136,22 +139,18 @@ public class Individual implements Comparable<Individual> {
 
     // mutation
     public Individual mutation() {
-        ArrayList<Integer> subsetList = new ArrayList<>(50);
-        for (int i=25; i<75; i++) subsetList.add(chromosome[i]);
+        ArrayList<Integer> subsetList = new ArrayList<>(70);
+        for (int i=15; i<85; i++) subsetList.add(chromosome[i]);
         Collections.shuffle(subsetList, Configuration.INSTANCE.randomGenerator);
         int[] mutant = new int[chromosome.length];
-        System.arraycopy(chromosome,0,mutant,0,25);
-        System.arraycopy(subsetList.stream().mapToInt(i -> i).toArray(),0,mutant,25,50);
-        System.arraycopy(chromosome,75,mutant,75,25);
+        System.arraycopy(chromosome,0,mutant,0,15);
+        System.arraycopy(subsetList.stream().mapToInt(i -> i).toArray(),0,mutant,15,70);
+        System.arraycopy(chromosome,85,mutant,85,15);
         return new Individual(mutant);
     }
 
     public int[] getGenes() {
         return chromosome;
-    }
-
-    public boolean validity() {
-        return isValid;
     }
 
     public int getFleetSize() {
