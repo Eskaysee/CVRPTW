@@ -36,9 +36,11 @@ public class Application {
             fh.setFormatter(formatter);
             log.addHandler(fh);
 
+//            while ((i++ <= Configuration.INSTANCE.maximumNumberOfGenerations) && (bestIndividual.getFitness() != 0)) {
             while (
                     (i++ <= Configuration.INSTANCE.maximumNumberOfIterations)
-//                    && !optimum(bestIndividual)
+                    && !optimum(bestIndividual)
+                    && !population.isConverged()
             ) {
                 System.out.println("generation " + decimalFormat.format(i) + " : " + Arrays.toString(population.getPopulation()[0].getGenes())
                         + ", fitness = " + population.getPopulation()[0].getFitness());
@@ -49,6 +51,7 @@ public class Application {
             }
             log.info("generation                  : " + decimalFormat.format(i) + " : " + Arrays.toString(bestIndividual.getGenes()));
             log.info("Best Individua: \n" + bestIndividual);
+//            log.info("Sum Total Distance          : " + bestIndividual.getDistance());
             log.info("runtime                     : " + (System.nanoTime() - runtimeStart) + " ns");
             log.info("numberOfCrossoverOperations : " + population.getNumberOfCrossoverOperations());
             log.info("numberOfMutationOperations  : " + population.getNumberOfMutationOperations());

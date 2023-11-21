@@ -8,6 +8,7 @@ import java.util.Scanner;
 public enum Configuration {
     INSTANCE;
 
+    public final char[] targetGene = "genetic algorithms are fascinating".toCharArray();
     public final String fileSeparator = System.getProperty("file.separator");
     public final String lineSeparator = System.getProperty("line.separator");
     public final String userDirectory = System.getProperty("user.dir");
@@ -15,8 +16,10 @@ public enum Configuration {
     public final MersenneTwister randomGenerator = new MersenneTwister(System.currentTimeMillis());
     public final Map<Integer, Customer> customers = clientData();
     public final double[][] distanceMatrix = makeDistanceMatrix();
-    public final int populationSize = 225;
+    public final int populationSize = 50;
     public final int maximumNumberOfIterations = 10000;
+    public final int vehicleLifetime = 230;
+    public final int maximumNumberOfGenerations = maximumNumberOfIterations/vehicleLifetime;
     public final int numberOfCustomers = 100;
     public final int vehicleCapacity = 200;
     //Genetic Algorithm Parameters

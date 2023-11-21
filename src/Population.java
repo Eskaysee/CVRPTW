@@ -12,6 +12,8 @@ public class Population {
 
     private Map<Individual, Float> wheel;
 
+    private boolean converged = false;
+
     public Population(int size, double crossoverRatio, double elitismRatio, double mutationRatio) {
         this.crossoverRatio = crossoverRatio;
         this.elitismRatio = elitismRatio;
@@ -73,6 +75,10 @@ public class Population {
         Arrays.sort(individualArray);
         this.population = individualArray;
         this.wheel = roulette();
+
+        int count = (int) Arrays.stream(population).filter(Individual::validity).count();
+        if (count == 1)
+            converged = true;
     }
 
     public Individual[] getPopulation() {
@@ -98,6 +104,7 @@ public class Population {
                         } else previousIndiv = indiv;
                     } else previousIndiv = indiv;
                 }
+//                System.out.println("iteration: " + i + " spin: "+ spin + " fleet: " + population.length);
             } while (i==1 && parents[0].equals(parents[1]));
         }
         return parents;
@@ -118,8 +125,12 @@ public class Population {
     private double[] scaleFitness() {
         double[] transformedFitness = new double[population.length];
         for (int i=0; i<population.length; i++) {
-            transformedFitness[i] = 15000 - population[i].getFitness();
+            transformedFitness[i] = 6000 - population[i].getFitness();
         }
         return transformedFitness;
+    }
+
+    public boolean isConverged() {
+        return converged;
     }
 }
